@@ -1,0 +1,18 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Icon from '../components/Icon.astro';
+---
+
+<BaseLayout title="Page not found" noindex>
+  <section class="screen">
+    <div class="container">
+      <div class="screen__code" aria-hidden="true" data-text="404">404</div>
+      <h1>That page doesn't exist.</h1>
+      <p>The link may be old or mistyped. Search the library, or head back to the start.</p>
+      <div class="hero__actions">
+        <a class="btn btn--primary btn--lg" href="/">Back to home</a>
+        <a class="btn btn--lg" href="/search/" data-open-search><Icon name="search" size={18} />Search guides</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

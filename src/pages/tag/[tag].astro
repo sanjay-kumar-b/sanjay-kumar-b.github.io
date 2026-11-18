@@ -1,0 +1,39 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ArticleCard from '../../components/ArticleCard.astro';
+import LibraryToolbar from '../../components/LibraryToolbar.astro';
+import { getArticles, allTags, tagSlug, categoryCounts, levelsOf, LEVELS } from '../../lib/articles';
+
+export async function getStaticPaths() {
+  const articles = await getArticles();
+  return allTags(articles).map((t) => ({
+    params: { tag: t.slug },
+    props: { name: t.name, articles: articles.filter((a) => a.data.tags.some((x) => tagSlug(x) === t.slug)) },
+  }));
+}
+const { name, articles } = Astro.props;
+const tracks = categoryCounts(articles).filter((c) => c.count > 0);
+const levelCounts = Object.fromEntries(LEVELS.map((l) => [l, articles.filter((a) => levelsOf(a).includes(l)).length]));
+---
+
+<BaseLayout title={`${name} articles`} description={`SF SKODE guides tagged ${name}.`}>
+  <div class="container">
+    <header class="page-head">
+      <nav aria-label="Breadcrumb"><ol class="crumbs"><li><a href="/articles/">Articles</a></li><li>Tag</li></ol></nav>
+      <p class="eyebrow"><span>Tag</span></p>
+      <h1 class="display">{name}</h1>
+      <p class="page-head__lead">{articles.length} {articles.length === 1 ? 'guide' : 'guides'} tagged {name}.</p>
+    </header>
+    {articles.length > 3 && <LibraryToolbar total={articles.length} tracks={tracks.length > 1 ? tracks : []} levelCounts={levelCounts} />}
+    <section class="section section--tight">
+      <div class="grid grid--cards" data-lib-grid>{articles.map((a, i) => <ArticleCard article={a} level={2} lib i={i % 6} />)}</div>
+      <div class="empty" data-lib-empty hidden>
+        <h2>No guides match those filters</h2>
+        <button class="btn btn--primary" type="button" data-lib-reset>Clear filters</button>
+      </div>
+    </section>
+  </div>
+  <script>
+    import '../../scripts/library';
+  </script>
+</BaseLayout>

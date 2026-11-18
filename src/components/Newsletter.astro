@@ -1,0 +1,29 @@
+---
+import { SITE } from '../config/site';
+import Icon from './Icon.astro';
+const action = SITE.newsletterAction;
+---
+
+<section class="section" aria-labelledby="nl-title">
+  <div class="container">
+    <div class="cta" data-spot data-reveal>
+      <span class="cta__orb" aria-hidden="true"></span>
+      <div class="cta__text">
+        <p class="eyebrow"><span>Stay current</span></p>
+        <h2 id="nl-title">Get new guides as they're published.</h2>
+        <p>Salesforce, Agentforce and React tutorials, sent when they go live. No spam, and you can unsubscribe anytime.</p>
+      </div>
+      <div class="cta__action">
+        {action ? (
+          <form class="form-row" action={action} method="post" target="_blank">
+            <label class="sr-only" for="nl-email">Email address</label>
+            <input class="input" id="nl-email" type="email" name="email" placeholder="you@example.com" required autocomplete="email" />
+            <button class="btn btn--primary" type="submit" data-magnet>Subscribe</button>
+          </form>
+        ) : (
+          <a class="btn btn--primary btn--lg" href="/follow/" data-magnet><Icon name="rss" size={18} />Follow with RSS</a>
+        )}
+      </div>
+    </div>
+  </div>
+</section>

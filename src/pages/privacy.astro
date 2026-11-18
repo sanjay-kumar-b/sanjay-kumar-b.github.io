@@ -1,0 +1,21 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../config/site';
+---
+
+<BaseLayout title="Privacy Policy" description="How this site handles your data.">
+  <div class="container container--narrow">
+    <header class="page-head"><h1 class="display">Privacy Policy</h1><p>Last updated: November 2026</p></header>
+    <div class="doc section--tight">
+      <p>This is a template. Have it reviewed against the laws that apply to you before relying on it.</p>
+      <h2>What we collect</h2>
+      <p>This site does not require accounts. If you subscribe to the newsletter or use the contact form, we receive the details you submit (such as your name and email address) and use them only to respond or send the updates you asked for.</p>
+      <h2>Analytics</h2>
+      <p>If enabled, we use privacy-friendly analytics that do not use advertising cookies. Your theme preference (light or dark) is stored in your browser's local storage and never sent to us.</p>
+      <h2>Third parties</h2>
+      <p>Newsletter and contact messages may be processed by the email or form service configured for this site. Links to external sites are governed by those sites' own policies.</p>
+      <h2>Your rights</h2>
+      <p>You can ask us to access, correct or delete the personal data we hold about you by emailing <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>.</p>
+    </div>
+  </div>
+</BaseLayout>

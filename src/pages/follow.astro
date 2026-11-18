@@ -1,0 +1,68 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Icon from '../components/Icon.astro';
+import { SITE } from '../config/site';
+
+const feedUrl = new URL('/rss.xml', Astro.site).toString();
+const enc = encodeURIComponent(feedUrl);
+const readers = [
+  { name: 'Feedly', href: `https://feedly.com/i/subscription/feed/${enc}` },
+  { name: 'Inoreader', href: `https://www.inoreader.com/?add_feed=${enc}` },
+  { name: 'Reader app', href: `feed:${feedUrl}` },
+];
+---
+
+<BaseLayout title="Follow with RSS" description={`Get new ${SITE.name} guides in your feed reader the moment they are published. No account, no email, no tracking.`}>
+  <div class="container container--narrow">
+    <header class="page-head">
+      <p class="eyebrow"><span>RSS</span></p>
+      <h1 class="display">Follow with RSS</h1>
+      <p>Get every new guide in your own reader the moment it is published. No account, no email, no tracking.</p>
+    </header>
+
+    <section class="section section--tight" aria-labelledby="feed-title">
+      <div class="feed-box">
+        <h2 id="feed-title">Feed address</h2>
+        <div class="feed-box__row">
+          <input class="input" id="feed-url" type="text" readonly value={feedUrl} aria-label="Feed address" onfocus="this.select()" />
+          <button class="btn btn--primary" type="button" id="feed-copy"><Icon name="copy" size={18} />Copy address</button>
+        </div>
+        <p class="feed-box__hint">Paste this into any feed reader. Or add it in one click:</p>
+        <ul class="feed-box__readers" role="list">
+          {readers.map((r) => (
+            <li><a class="btn" href={r.href} {...(r.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{r.name}</a></li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <div class="doc section--tight">
+      <h2>What is RSS?</h2>
+      <p>RSS is a simple, open way to follow a website. Instead of checking back for new posts, you add the site's feed to a feed reader app, and the reader shows each new guide as soon as it goes live.</p>
+      <h2>How to start</h2>
+      <ol>
+        <li>Pick a feed reader. Feedly and Inoreader work in the browser, and NetNewsWire, Reeder and many others are apps.</li>
+        <li>Use one of the buttons above ("Reader app" opens NetNewsWire, Reeder and similar apps), or copy the feed address and choose "Add feed" in your reader.</li>
+        <li>New guides appear in your reader automatically.</li>
+      </ol>
+      <p>The feed link itself, <a href="/rss.xml">rss.xml</a>, is written for apps to read, so opening it in a browser shows plain code. That is normal.</p>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { copyText, announce } from '../scripts/util';
+  const btn = document.getElementById('feed-copy') as HTMLButtonElement | null;
+  const input = document.getElementById('feed-url') as HTMLInputElement | null;
+  const label = btn?.lastChild;
+  let timer = 0;
+  btn?.addEventListener('click', async () => {
+    if (!input || !label) return;
+    const ok = await copyText(input.value);
+    if (!ok) { input.focus(); input.select(); announce('Press Ctrl+C to copy the feed address.'); return; }
+    label.textContent = 'Copied';
+    announce('Feed address copied.');
+    clearTimeout(timer);
+    timer = window.setTimeout(() => { label.textContent = 'Copy address'; }, 2000);
+  });
+</script>

@@ -1,0 +1,185 @@
+---
+import { render } from 'astro:content';
+import { Image } from 'astro:assets';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ArticleCard from '../../components/ArticleCard.astro';
+import CoverImage from '../../components/CoverImage.astro';
+import SectionHead from '../../components/SectionHead.astro';
+import Newsletter from '../../components/Newsletter.astro';
+import Icon from '../../components/Icon.astro';
+import { getArticles, related, readingTime, fmtDate, isoDate, getCategory, tagSlug, levelsOf, levelLabel, levelSlug } from '../../lib/articles';
+import { ogCoverPath } from '../../lib/covers';
+import { SITE } from '../../config/site';
+
+export async function getStaticPaths() {
+  const articles = await getArticles();
+  return articles.map((article, i) => ({
+    params: { id: article.id },
+    props: { article, prev: articles[i + 1] ?? null, next: articles[i - 1] ?? null, pool: articles },
+  }));
+}
+
+const { article, prev, next, pool } = Astro.props;
+const { Content, headings } = await render(article);
+const d = article.data;
+const cat = getCategory(d.category)!;
+const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const rel = related(article, pool);
+const url = new URL(`/articles/${article.id}/`, Astro.site).toString();
+const mins = readingTime(article.body);
+const lv = levelsOf(article);
+const og = await ogCoverPath(d.cover);
+const ogAbs = new URL(og ?? '/og-default.png', Astro.site).toString();
+const shareText = encodeURIComponent(d.title);
+const shareUrl = encodeURIComponent(url);
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'TechArticle',
+    headline: d.title,
+    description: d.description,
+    image: ogAbs,
+    datePublished: isoDate(d.publishedAt),
+    dateModified: isoDate(d.updatedAt ?? d.publishedAt),
+    author: { '@type': 'Person', name: SITE.author.name },
+    publisher: { '@type': 'Organization', name: SITE.name, logo: { '@type': 'ImageObject', url: new URL('/icon-512.png', Astro.site).toString() } },
+    mainEntityOfPage: url,
+    keywords: d.tags.join(', '),
+    articleSection: cat.name,
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: String(Astro.site) },
+      { '@type': 'ListItem', position: 2, name: cat.name, item: new URL(`/category/${cat.slug}/`, Astro.site).toString() },
+      { '@type': 'ListItem', position: 3, name: d.title, item: url },
+    ],
+  },
+];
+---
+
+<BaseLayout title={d.title} description={d.description} type="article" jsonLd={jsonLd} image={og} publishedAt={isoDate(d.publishedAt)} updatedAt={d.updatedAt && isoDate(d.updatedAt)}>
+  <div class="progress" data-progress aria-hidden="true"></div>
+  <article class="article" style={`--c:${cat.accent}`}>
+    <div class="container">
+      <div class="article__grid">
+        <header class="article__head">
+          <nav aria-label="Breadcrumb">
+            <ol class="crumbs">
+              <li><a href="/">Home</a></li>
+              <li><a href={`/category/${cat.slug}/`}>{cat.name}</a></li>
+            </ol>
+          </nav>
+          <div class="article__tags">
+            <a class="tag" href={`/category/${cat.slug}/`}><i class="dot"></i>{cat.short}</a>
+            <span class="level level--inline" data-lv={levelSlug(lv[0])} data-lv-max={levelSlug(lv[lv.length - 1])}><span class="level__bars" aria-hidden="true"><i></i><i></i><i></i></span>{levelLabel(lv)}</span>
+          </div>
+          <h1>{d.title}</h1>
+          <p class="article__desc">{d.description}</p>
+          <div class="byline">
+            <span class="byline__who">
+              {SITE.author.photo
+                ? <Image class="avatar" src={SITE.author.photo} alt="" width={88} height={88} fit="cover" loading="eager" />
+                : <span class="avatar" aria-hidden="true"></span>}
+              {SITE.author.name}
+            </span>
+            <div class="byline__meta">
+              <time datetime={isoDate(d.publishedAt)}>{fmtDate(d.publishedAt)}</time>
+              <span>{mins} min read</span>
+              {d.apiVersion && <span>API {d.apiVersion}</span>}
+              {d.updatedAt && <span class="byline__upd">Updated {fmtDate(d.updatedAt)}</span>}
+            </div>
+          </div>
+        </header>
+
+        <div class="article__main">
+          <div class="article__cover">
+            <CoverImage cover={d.cover} category={d.category} sizes="(min-width: 1040px) 760px, 94vw" widths={[480, 760, 1080, 1520]} eager />
+          </div>
+
+          {toc.length > 1 && (
+            <details class="toc-inline">
+              <summary>On this page<Icon name="chevron" size={18} /></summary>
+              <nav class="toc" aria-label="On this page">
+                <ul role="list">{toc.map((h) => <li class={`h${h.depth}`}><a href={`#${h.slug}`} data-toc-link>{h.text}</a></li>)}</ul>
+              </nav>
+            </details>
+          )}
+
+          <div class="prose" data-prose><Content /></div>
+
+          <div class="article__foot">
+            {d.sources.length > 0 ? (
+              <section class="refs" aria-labelledby="refs-h">
+                <h2 id="refs-h"><Icon name="shield" size={20} />Sources and references</h2>
+                <ol>{d.sources.map((s) => <li><a href={s.url} rel="noopener noreferrer" target="_blank">{s.title}<Icon name="external" size={14} /></a></li>)}</ol>
+              </section>
+            ) : (
+              <p class="notice">This article lists no external sources. Verify details against official documentation before relying on them.</p>
+            )}
+            <p class="notice">Salesforce releases three times a year, so features and limits change. Always confirm against the current official documentation.</p>
+
+            <div class="share">
+              <span class="share__label">Share</span>
+              <button class="btn btn--sm" type="button" data-copy-link data-url={url}><Icon name="link" size={16} /><span>Copy link</span></button>
+              <a class="btn btn--sm" href={`https://x.com/intent/post?text=${shareText}&url=${shareUrl}`} target="_blank" rel="noopener noreferrer">Post on X</a>
+              <a class="btn btn--sm" href={`https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`} target="_blank" rel="noopener noreferrer">LinkedIn</a>
+            </div>
+
+            {d.tags.length > 0 && (
+              <div class="chips" aria-label="Tags">{[...new Set(d.tags)].map((t) => <a class="chip" href={`/tag/${tagSlug(t)}/`}>{t}</a>)}</div>
+            )}
+
+            {(prev || next) && (
+              <nav class="pn" aria-label="More articles">
+                {prev ? <a href={`/articles/${prev.id}/`} rel="prev"><small><Icon name="arrow-left" size={14} />Previous article</small><b>{prev.data.title}</b></a> : <span />}
+                {next ? <a class="next" href={`/articles/${next.id}/`} rel="next"><small>Next article<Icon name="arrow-right" size={14} /></small><b>{next.data.title}</b></a> : <span />}
+              </nav>
+            )}
+          </div>
+        </div>
+
+        <aside class="article__side" aria-label="Article tools">
+          <div class="side-sticky">
+            {toc.length > 1 && (
+              <nav class="toc toc--side" aria-label="On this page">
+                <p class="toc__title">On this page</p>
+                <ul role="list">{toc.map((h) => <li class={`h${h.depth}`}><a href={`#${h.slug}`} data-toc-link>{h.text}</a></li>)}</ul>
+              </nav>
+            )}
+            <div class="reader">
+              <div class="reader__row">
+                <span class="reader__label">Progress</span>
+                <span class="reader__pct" data-pct>0%</span>
+              </div>
+              <div class="reader__meter" aria-hidden="true"><i data-meter></i></div>
+              <div class="reader__row reader__row--tools" data-reader-tools hidden>
+                <span class="reader__label"><Icon name="text-size" size={16} />Text size</span>
+                <span class="seg seg--sm" role="group" aria-label="Text size">
+                  <button class="seg__btn" type="button" data-fs="-1" aria-label="Smaller text">A−</button>
+                  <button class="seg__btn" type="button" data-fs="1" aria-label="Larger text">A+</button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    {rel.length > 0 && (
+      <section class="section" aria-labelledby="rel-h">
+        <div class="container">
+          <SectionHead id="rel-h" eyebrow="Next up" title="Keep reading" />
+          <div class="grid grid--cards">{rel.map((a, i) => <ArticleCard article={a} i={i} />)}</div>
+        </div>
+      </section>
+    )}
+  </article>
+
+  <Newsletter />
+  <script>
+    import '../../scripts/article';
+  </script>
+</BaseLayout>

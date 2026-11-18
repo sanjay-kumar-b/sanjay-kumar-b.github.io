@@ -1,0 +1,53 @@
+---
+// Filter / sort / layout controls for any list of ArticleCards rendered with `lib`. Driven by scripts/library.ts.
+// Hidden when JavaScript is off (the full list is still there, just unfiltered).
+import Icon from './Icon.astro';
+import { LEVELS, levelSlug } from '../lib/articles';
+interface Props {
+  total: number;
+  tracks?: { slug: string; short: string; accent: string; count: number }[];
+  levelCounts: Record<string, number>;
+}
+const { total, tracks = [], levelCounts } = Astro.props;
+---
+
+<div class="lib-toolbar" data-lib-toolbar>
+  <div class="lib-row">
+    <div class="lib-search">
+      <Icon name="search" size={18} />
+      <label class="sr-only" for="lib-q">Filter this list</label>
+      <input class="lib-search__input" id="lib-q" type="search" placeholder="Filter by title, topic or tag" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" data-lib-q />
+    </div>
+    <div class="lib-opts">
+      <label class="select">
+        <span class="sr-only">Sort by</span>
+        <select data-lib-sort>
+          <option value="new">Newest first</option>
+          <option value="old">Oldest first</option>
+          <option value="az">Title A to Z</option>
+          <option value="short">Shortest read</option>
+          <option value="long">Longest read</option>
+        </select>
+        <Icon name="chevron" size={16} />
+      </label>
+      <div class="seg" role="group" aria-label="Layout">
+        <button class="seg__btn" type="button" data-lib-view="grid" aria-pressed="true" aria-label="Grid layout"><Icon name="grid" size={18} /></button>
+        <button class="seg__btn" type="button" data-lib-view="list" aria-pressed="false" aria-label="List layout"><Icon name="list" size={18} /></button>
+      </div>
+    </div>
+  </div>
+
+  {tracks.length > 0 && (
+    <div class="lib-chips" role="group" aria-label="Filter by topic" data-lib-cats>
+      <button class="chip" type="button" data-v="" aria-pressed="true">All<span class="chip__n">{total}</span></button>
+      {tracks.map((c) => <button class="chip" type="button" data-v={c.slug} aria-pressed="false" style={`--c:${c.accent}`}><i class="dot"></i>{c.short}<span class="chip__n">{c.count}</span></button>)}
+    </div>
+  )}
+
+  <div class="lib-chips" role="group" aria-label="Filter by level" data-lib-levels>
+    <button class="chip" type="button" data-v="" aria-pressed="true">Any level</button>
+    {LEVELS.map((l) => <button class="chip chip--lv" type="button" data-v={levelSlug(l)} data-lv={levelSlug(l)} aria-pressed="false"><span class="level__bars" aria-hidden="true"><i></i><i></i><i></i></span>{l}<span class="chip__n">{levelCounts[l] ?? 0}</span></button>)}
+  </div>
+
+  <p class="lib-count" role="status" aria-live="polite" data-lib-count>{total} {total === 1 ? 'guide' : 'guides'}</p>
+</div>

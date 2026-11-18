@@ -1,0 +1,42 @@
+---
+import { Image } from 'astro:assets';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Icon from '../components/Icon.astro';
+import { SITE } from '../config/site';
+const labels: Record<string, string> = { github: 'GitHub', linkedin: 'LinkedIn', x: 'X', youtube: 'YouTube' };
+const socials = Object.entries(SITE.social).filter(([, v]) => v);
+const initials = SITE.author.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+---
+
+<BaseLayout title="About" description={`About ${SITE.author.name} and why SF SKODE exists.`}>
+  <div class="container">
+    <header class="page-head">
+      <p class="eyebrow"><span>About</span></p>
+      <h1 class="display">About SF SKODE</h1>
+      <p>Clear, source-backed Salesforce learning, written by someone who builds on the platform every day.</p>
+    </header>
+    <div class="about section--tight">
+      <aside class="about__card" aria-label="Author" data-spot data-tilt>
+        {SITE.author.photo
+          ? <div class="photo"><Image src={SITE.author.photo} alt={`Photo of ${SITE.author.name}`} width={600} height={600} fit="cover" loading="eager" /></div>
+          : <div class="photo photo--mono" aria-hidden="true">{initials}</div>}
+        <h2>{SITE.author.name}</h2>
+        <p>{SITE.author.role}</p>
+        {socials.length > 0 && (
+          <ul class="social-list" role="list" style="width:100%">
+            {socials.map(([k, v]) => <li><a href={v} target="_blank" rel="noopener me"><Icon name={k === 'x' ? 'x' : k} />{labels[k] ?? k}</a></li>)}
+          </ul>
+        )}
+      </aside>
+      <div class="doc">
+        <p class="doc__lead">{SITE.author.bio}</p>
+        <h2>What you'll find here</h2>
+        <p>Practical tutorials on Apex, Lightning Web Components, Agentforce, Salesforce administration and React, with working code, common mistakes, and links to the official documentation each guide is based on.</p>
+        <h2>How articles are written</h2>
+        <p>Every article is reviewed before publishing. Where a feature, limit or API version could not be verified against official documentation, the article says so instead of guessing.</p>
+        <p class="notice" style="margin-top:28px">{SITE.disclaimer}</p>
+        <p style="margin-top:28px"><a class="btn btn--primary" href="/contact/">Get in touch</a></p>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

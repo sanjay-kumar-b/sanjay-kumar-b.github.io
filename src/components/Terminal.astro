@@ -1,0 +1,39 @@
+---
+import { SNIPPETS, highlight } from '../lib/snippets';
+import Icon from './Icon.astro';
+interface Props { articles: { id: string; title: string }[] }
+const { articles } = Astro.props;
+const snippets = SNIPPETS.map((s) => ({
+  ...s,
+  html: highlight(s.lang, s.code)
+    .split('\n')
+    .map((line, i) => `<span class="ln" style="--i:${i}">${line || ' '}</span>`)
+    .join(''),
+  guide: articles.find((a) => a.id === s.article),
+}));
+---
+
+<figure class="term" data-term>
+  <div class="term__top">
+    <span class="term__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <div class="term__tabs" role="tablist" aria-label="Code examples">
+      {snippets.map((s, i) => (
+        <button class="term__tab" type="button" role="tab" id={`term-tab-${s.id}`} aria-controls={`term-panel-${s.id}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} data-term-tab={s.id}>{s.label}</button>
+      ))}
+    </div>
+    <button class="term__copy" type="button" data-term-copy aria-label="Copy this code sample"><Icon name="copy" size={15} /><span>Copy</span></button>
+  </div>
+  <div class="term__body">
+    {snippets.map((s, i) => (
+      <div class="term__panel" role="tabpanel" id={`term-panel-${s.id}`} aria-labelledby={`term-tab-${s.id}`} data-term-panel={s.id} data-raw={s.code} data-active={i === 0 ? '' : undefined}>
+        <p class="term__file"><Icon name="file" size={14} /><span>{s.file}</span></p>
+        <pre class="term__code" tabindex="0" aria-label={`${s.label} example`}><code set:html={s.html} /></pre>
+      </div>
+    ))}
+  </div>
+  <figcaption class="term__foot" data-term-foot>
+    {snippets.map((s, i) => s.guide && (
+      <span class="term__guide" data-term-guide={s.id} data-active={i === 0 ? '' : undefined}>From the guide <a href={`/articles/${s.guide.id}/`}>{s.guide.title}</a></span>
+    ))}
+  </figcaption>
+</figure>

@@ -1,0 +1,31 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ArticleCard from '../../components/ArticleCard.astro';
+import LibraryToolbar from '../../components/LibraryToolbar.astro';
+import { getArticles, categoryCounts, levelsOf, LEVELS } from '../../lib/articles';
+const articles = await getArticles();
+const tracks = categoryCounts(articles);
+const levelCounts = Object.fromEntries(LEVELS.map((l) => [l, articles.filter((a) => levelsOf(a).includes(l)).length]));
+---
+
+<BaseLayout title="All articles" description="Every SF SKODE guide on Salesforce development, Agentforce, administration, React and DevOps. Filter by topic and level.">
+  <div class="container">
+    <header class="page-head">
+      <p class="eyebrow"><span>Library</span></p>
+      <h1 class="display">All articles</h1>
+      <p class="page-head__lead">{articles.length} guides across {tracks.length} topics. Filter by topic or level, sort, or press <kbd class="kbd">/</kbd> to search every word.</p>
+    </header>
+    <LibraryToolbar total={articles.length} tracks={tracks} levelCounts={levelCounts} />
+    <section class="section section--tight" aria-label="Articles">
+      <div class="grid grid--cards" data-lib-grid>{articles.map((a, i) => <ArticleCard article={a} level={2} eager={i < 3} lib i={i % 6} />)}</div>
+      <div class="empty" data-lib-empty hidden>
+        <h2>No guides match those filters</h2>
+        <p>Try a broader word or clear the filters.</p>
+        <button class="btn btn--primary" type="button" data-lib-reset>Clear filters</button>
+      </div>
+    </section>
+  </div>
+  <script>
+    import '../../scripts/library';
+  </script>
+</BaseLayout>

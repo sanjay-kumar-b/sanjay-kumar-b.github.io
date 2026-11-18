@@ -1,0 +1,50 @@
+---
+import { SITE } from '../config/site';
+import { CATEGORIES } from '../config/categories';
+import Icon from './Icon.astro';
+const year = new Date().getFullYear();
+const labels: Record<string, string> = { github: 'GitHub', linkedin: 'LinkedIn', x: 'X', youtube: 'YouTube' };
+const socials = Object.entries(SITE.social).filter(([, v]) => v);
+---
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a href="/" class="logo" aria-label={`${SITE.name} home`}><img class="logo__mark" src="/logo.svg" width="32" height="32" alt="" /><span class="logo__text">{SITE.name}</span></a>
+        <p>{SITE.tagline}</p>
+        <p class="footer-status"><span class="pulse pulse--ok" aria-hidden="true"></span>New guides published regularly</p>
+      </div>
+      <nav aria-label="Topics" class="footer-col">
+        <h2>Topics</h2>
+        <ul role="list">{CATEGORIES.map((c) => <li><a href={`/category/${c.slug}/`}>{c.name}</a></li>)}</ul>
+      </nav>
+      <nav aria-label="Site" class="footer-col">
+        <h2>Site</h2>
+        <ul role="list">
+          <li><a href="/articles/">All articles</a></li>
+          <li><a href="/search/">Search</a></li>
+          <li><a href="/about/">About</a></li>
+          <li><a href="/contact/">Contact</a></li>
+          <li><a href="/follow/">Follow with RSS</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Follow and legal" class="footer-col">
+        {socials.length > 0 && (<>
+          <h2>Follow</h2>
+          <ul role="list">{socials.map(([k, v]) => <li><a href={v} rel="noopener me" target="_blank">{labels[k] ?? k}</a></li>)}</ul>
+        </>)}
+        <h2 class={socials.length ? 'footer-col__gap' : undefined}>Legal</h2>
+        <ul role="list">
+          <li><a href="/privacy/">Privacy Policy</a></li>
+          <li><a href="/terms/">Terms &amp; Conditions</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="wordmark" aria-hidden="true">SKODE</div>
+    <div class="footer-legal">
+      <p>© {year} {SITE.name}. {SITE.disclaimer}</p>
+      <p class="footer-keys"><kbd class="kbd">/</kbd> search <kbd class="kbd">T</kbd> theme</p>
+    </div>
+  </div>
+</footer>

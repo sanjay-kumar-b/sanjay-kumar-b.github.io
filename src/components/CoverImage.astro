@@ -1,0 +1,42 @@
+---
+// Renders an article cover as a responsive 16:9 image (never stretched or cropped awkwardly), or a branded fallback.
+// The wrapper that contains it (.card__media / .article__cover) fixes the 16:9 box, so the layout is identical
+// whether the image is present, still loading, or missing.
+import { Image } from 'astro:assets';
+import { coverFor } from '../lib/covers';
+import { getCategory } from '../config/categories';
+import Icon from './Icon.astro';
+
+interface Props {
+  cover?: string;
+  category: string;
+  sizes: string;
+  widths: number[];
+  eager?: boolean;
+}
+const { cover, category, sizes, widths, eager = false } = Astro.props;
+const meta = coverFor(cover);
+const cat = getCategory(category);
+---
+{meta ? (
+  <Image
+    class="cover-img"
+    src={meta}
+    alt=""
+    widths={widths}
+    sizes={sizes}
+    format="webp"
+    quality={80}
+    loading={eager ? 'eager' : 'lazy'}
+    fetchpriority={eager ? 'high' : 'auto'}
+    decoding={eager ? 'sync' : 'async'}
+  />
+) : cover && cover.startsWith('/') ? (
+  <img class="cover-img" src={cover} alt="" width="1600" height="900" loading={eager ? 'eager' : 'lazy'} decoding="async" />
+) : (
+  <div class="cover-art" style={`--c:${cat?.accent ?? '#4d7cff'}`}>
+    <span class="cover-art__grid" aria-hidden="true"></span>
+    <span class="cover-art__icon"><Icon name={cat?.icon ?? 'code'} size={34} /></span>
+    <span class="cover-art__label">{cat?.short ?? 'Article'}</span>
+  </div>
+)}

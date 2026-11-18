@@ -1,0 +1,266 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ArticleCard from '../components/ArticleCard.astro';
+import TrackCard from '../components/TrackCard.astro';
+import SectionHead from '../components/SectionHead.astro';
+import Newsletter from '../components/Newsletter.astro';
+import Terminal from '../components/Terminal.astro';
+import Icon from '../components/Icon.astro';
+import { SITE } from '../config/site';
+import { getArticles, categoryCounts, allTags, getCategory, levelsOf, LEVELS, levelSlug } from '../lib/articles';
+
+const articles = await getArticles();
+const tracks = categoryCounts(articles);
+
+const featured = articles.filter((a) => a.data.featured).slice(0, 3);
+const lead = featured.length ? featured : articles.slice(0, 3);
+const leadIds = new Set(lead.map((a) => a.id));
+const latest = articles.filter((a) => !leadIds.has(a.id)).slice(0, 6);
+const shown = new Set([...leadIds, ...latest.map((a) => a.id)]);
+const agentCat = getCategory('agentforce');
+const agentforce = articles.filter((a) => a.data.category === 'agentforce' && !shown.has(a.id)).slice(0, 3);
+const tags = allTags(articles).slice(0, 18);
+const newest = articles[0];
+
+// Numbers shown in the hero are computed from the real content, so they can never go stale.
+const codeSamples = articles.reduce((n, a) => n + Math.floor(((a.body ?? '').match(/^```/gm)?.length ?? 0) / 2), 0);
+const sourceCount = articles.reduce((n, a) => n + a.data.sources.length, 0);
+const stats = [
+  { n: articles.length, label: 'Guides', icon: 'book' },
+  { n: tracks.length, label: 'Topic tracks', icon: 'compass' },
+  { n: codeSamples, label: 'Code samples', icon: 'code' },
+  { n: sourceCount, label: 'Official sources linked', icon: 'shield' },
+];
+
+// Per-track picks for the explorer (featured first, then newest).
+const rank = (a: (typeof articles)[number]) => (a.data.featured ? 1 : 0);
+const trackPicks = Object.fromEntries(
+  tracks.map((t) => [
+    t.slug,
+    articles.filter((a) => a.data.category === t.slug).sort((a, b) => rank(b) - rank(a) || b.data.publishedAt.getTime() - a.data.publishedAt.getTime()).slice(0, 3),
+  ]),
+);
+
+// Learning paths by level.
+const LEVEL_COPY: Record<string, { title: string; text: string; icon: string }> = {
+  Beginner: { title: 'Start from zero', text: 'Concepts, vocabulary and first working examples. No prior Salesforce development needed.', icon: 'compass' },
+  Intermediate: { title: 'Build real features', text: 'Integrations, async processing, security and testing patterns you will use at work.', icon: 'tools' },
+  Advanced: { title: 'Design for production', text: 'Architecture, reliability and platform internals for systems that must not fail.', icon: 'cpu' },
+};
+const paths = LEVELS.map((l) => {
+  const list = articles.filter((a) => levelsOf(a).includes(l));
+  return { level: l, slug: levelSlug(l), total: list.length, picks: list.slice(0, 6), ...LEVEL_COPY[l] };
+});
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE.name,
+  url: String(Astro.site),
+  description: SITE.description,
+  potentialAction: { '@type': 'SearchAction', target: `${new URL('/search/', Astro.site)}?q={search_term_string}`, 'query-input': 'required name=search_term_string' },
+};
+const words = ['clear', 'modern', 'hands-on', 'AI-ready'];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <!-- ============ HERO ============ -->
+  <section class="hero" data-hero>
+    <canvas class="hero__fx" data-fx aria-hidden="true"></canvas>
+    <div class="hero__floor" aria-hidden="true"></div>
+    <div class="container hero__grid">
+      <div class="hero__copy">
+        {newest && (
+          <a class="hero__pill" href={`/articles/${newest.id}/`} data-reveal>
+            <b>New</b><span>{newest.data.title}</span><Icon name="arrow-right" size={16} />
+          </a>
+        )}
+        <h1 class="display hero__title" data-reveal style="--d:80ms">
+          <span class="hero__l hero__l1">Learn Salesforce</span>
+          <span class="hero__l">the <span class="rot" data-rot aria-live="off">{words.map((w, i) => <span class="rot__w" data-on={i === 0 ? '' : undefined} aria-hidden={i === 0 ? undefined : 'true'}>{w}</span>)}</span> way.</span>
+        </h1>
+        <p class="hero__lead" data-reveal style="--d:160ms">{SITE.description}</p>
+
+        <div class="hero__actions" data-reveal style="--d:220ms">
+          <a class="btn btn--primary btn--lg" href="/articles/" data-magnet>Start reading<Icon name="arrow-right" size={18} /></a>
+          <a class="btn btn--lg" href="/categories/" data-magnet>Browse topics</a>
+        </div>
+
+        <div class="hs" data-hs data-reveal style="--d:280ms">
+          <form class="hs__field" action="/search/" method="get" role="search">
+            <Icon name="search" size={20} />
+            <label class="sr-only" for="hs-input">Search {articles.length} guides</label>
+            <input class="hs__input" id="hs-input" name="q" type="search" placeholder={`Search ${articles.length} guides: try “batch apex” or “agent actions”`} autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" role="combobox" aria-expanded="false" aria-controls="hs-list" aria-autocomplete="list" />
+            <kbd class="kbd" aria-hidden="true">/</kbd>
+          </form>
+          <ul class="hs__list" id="hs-list" role="listbox" aria-label="Search suggestions" hidden></ul>
+        </div>
+      </div>
+
+      <div class="hero__stage" data-reveal style="--d:200ms">
+        <Terminal articles={articles.map((a) => ({ id: a.id, title: a.data.title }))} />
+        <div class="hero__chips">
+          {['agentforce', 'react-and-salesforce', 'salesforce-administration'].map((s) => {
+            const c = getCategory(s);
+            return c && <a href={`/category/${c.slug}/`} style={`--c:${c.accent}`}><Icon name={c.icon} size={16} />{c.short}</a>;
+          })}
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <dl class="stats" data-reveal>
+        {stats.map((s) => (
+          <div class="stat">
+            <dt><Icon name={s.icon} size={18} />{s.label}</dt>
+            <dd><span data-count={s.n}>{s.n}</span></dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  </section>
+
+  <!-- ============ MARQUEE ============ -->
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee__track">
+      {[0, 1].map(() => (
+        <ul class="marquee__row" role="presentation">
+          {tags.map((t) => <li><a href={`/tag/${t.slug}/`} tabindex="-1">{t.name}</a></li>)}
+        </ul>
+      ))}
+    </div>
+  </div>
+
+  <!-- ============ TRACK EXPLORER ============ -->
+  <section class="section" aria-labelledby="topics-h">
+    <div class="container">
+      <SectionHead id="topics-h" eyebrow="Explore" title="Pick a track" blurb="Five tracks, each built to be read in any order. Choose one to preview its best guides." href="/categories/" cta="All topics" />
+      <div class="xp" data-tabs>
+        <div class="xp__nav tabs-nav" role="tablist" aria-label="Topic tracks" aria-orientation="vertical" data-reveal>
+          {tracks.map((c, i) => (
+            <button class="xp__tab" type="button" role="tab" id={`xp-tab-${c.slug}`} aria-controls={`xp-panel-${c.slug}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} data-tab style={`--c:${c.accent}`}>
+              <span class="xp__ico"><Icon name={c.icon} size={20} /></span>
+              <span class="xp__name">{c.name}</span>
+              <span class="xp__count">{c.count}</span>
+            </button>
+          ))}
+        </div>
+        <div class="xp__stage">
+          {tracks.map((c, i) => (
+            <div class="xp__panel" role="tabpanel" id={`xp-panel-${c.slug}`} aria-labelledby={`xp-tab-${c.slug}`} data-tabpanel hidden={i !== 0} style={`--c:${c.accent}`}>
+              <div class="xp__intro">
+                <h3>{c.name}</h3>
+                <p>{c.description}</p>
+                <ul class="xp__topics" role="list" aria-label="Topics covered">{c.topics.map((t) => <li>{t}</li>)}</ul>
+                <a class="btn btn--primary" href={`/category/${c.slug}/`}>Open this track<Icon name="arrow-right" size={18} /></a>
+              </div>
+              <div class="xp__picks">
+                {trackPicks[c.slug].map((a) => <ArticleCard article={a} variant="row" level={3} />)}
+                {trackPicks[c.slug].length === 0 && <p class="empty-note">New {c.name} guides are on the way.</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ START HERE ============ -->
+  {lead.length > 0 && (
+    <section class="section section--tight" aria-labelledby="start-h">
+      <div class="container">
+        <SectionHead id="start-h" eyebrow="Editor's picks" title="Start here" blurb="Hand-picked guides that give the fastest return on your time." href="/articles/" cta="All articles" />
+        <div class={`bento bento--${lead.length >= 3 ? 'trio' : lead.length === 2 ? 'duo' : 'solo'}`}>
+          <ArticleCard article={lead[0]} variant="feature" level={3} eager />
+          {lead.length > 1 && (
+            <div class="bento__rest">
+              {lead.slice(1).map((a, i) => <ArticleCard article={a} variant="row" i={i + 1} />)}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- ============ LEARNING PATHS ============ -->
+  <section class="section" aria-labelledby="paths-h">
+    <div class="container">
+      <SectionHead id="paths-h" eyebrow="Learning paths" title="Choose your level" blurb="Every guide is rated, so you can climb from first steps to production design without guessing what to read next." />
+      <div class="paths" data-tabs>
+        <div class="paths__nav tabs-nav" role="tablist" aria-label="Difficulty level" data-reveal>
+          <span class="paths__rail" aria-hidden="true"><i data-rail></i></span>
+          {paths.map((p, i) => (
+            <button class="paths__tab" type="button" role="tab" id={`path-tab-${p.slug}`} aria-controls={`path-panel-${p.slug}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} data-tab data-lv={p.slug}>
+              <span class="paths__node" aria-hidden="true"><Icon name={p.icon} size={18} /></span>
+              <span class="paths__label"><b>{p.level}</b><small>{p.total} {p.total === 1 ? 'guide' : 'guides'}</small></span>
+            </button>
+          ))}
+        </div>
+        {paths.map((p, i) => (
+          <div class="paths__panel" role="tabpanel" id={`path-panel-${p.slug}`} aria-labelledby={`path-tab-${p.slug}`} data-tabpanel hidden={i !== 0}>
+            <div class="paths__head">
+              <div>
+                <h3>{p.title}</h3>
+                <p>{p.text}</p>
+              </div>
+              <a class="link-more" href={`/articles/?level=${p.slug}`}>All {p.level.toLowerCase()} guides<Icon name="arrow-right" size={18} /></a>
+            </div>
+            <div class="grid grid--cards">{p.picks.map((a, n) => <ArticleCard article={a} i={n} />)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LATEST ============ -->
+  {latest.length > 0 && (
+    <section class="section section--tight" aria-labelledby="latest-h">
+      <div class="container">
+        <SectionHead id="latest-h" eyebrow="Fresh" title="Latest guides" href="/articles/" />
+        <div class="grid grid--cards">{latest.map((a, i) => <ArticleCard article={a} i={i} />)}</div>
+      </div>
+    </section>
+  )}
+
+  <!-- ============ AGENTFORCE BAND ============ -->
+  {agentforce.length > 0 && agentCat && (
+    <section class="section" aria-labelledby="agent-h">
+      <div class="container">
+        <div class="band" style={`--c:${agentCat.accent}`} data-reveal>
+          <span class="band__orb" aria-hidden="true"></span>
+          <SectionHead id="agent-h" eyebrow="Spotlight" title="Agentforce, in practice" blurb={agentCat.description} href={`/category/${agentCat.slug}/`} cta="Agentforce track" />
+          <div class="grid grid--cards">{agentforce.map((a, i) => <ArticleCard article={a} i={i} />)}</div>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- ============ PILLARS ============ -->
+  <section class="section" aria-labelledby="why-h">
+    <div class="container">
+      <SectionHead id="why-h" eyebrow="Why SF SKODE" title="Written to be checked, not just read" />
+      <div class="pillars">
+        <div class="pillar" data-spot data-reveal><span class="pillar__ico"><Icon name="shield" size={26} /></span><h3>Source-backed</h3><p>Every guide links the official documentation it was written from, so you can check any claim.</p></div>
+        <div class="pillar" data-spot data-reveal style="--d:80ms"><span class="pillar__ico"><Icon name="code" size={26} /></span><h3>Code you can copy</h3><p>Highlighted examples with a one-click copy button, written to run in a sandbox org.</p></div>
+        <div class="pillar" data-spot data-reveal style="--d:160ms"><span class="pillar__ico"><Icon name="clock" size={26} /></span><h3>Honest about change</h3><p>Salesforce ships three releases a year. Where something could not be verified, the guide says so.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAGS ============ -->
+  {tags.length > 0 && (
+    <section class="section section--tight" aria-labelledby="tags-h">
+      <div class="container">
+        <SectionHead id="tags-h" title="Popular topics" />
+        <div class="chips" data-reveal>{tags.map((t) => <a class="chip" href={`/tag/${t.slug}/`}>{t.name}<span class="chip__n">{t.count}</span></a>)}</div>
+      </div>
+    </section>
+  )}
+
+  <Newsletter />
+
+  <script>
+    import '../scripts/hero';
+    import '../scripts/tabs';
+  </script>
+</BaseLayout>

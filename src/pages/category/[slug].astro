@@ -1,0 +1,46 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ArticleCard from '../../components/ArticleCard.astro';
+import LibraryToolbar from '../../components/LibraryToolbar.astro';
+import Icon from '../../components/Icon.astro';
+import { getArticles, CATEGORIES, levelsOf, LEVELS } from '../../lib/articles';
+
+export function getStaticPaths() {
+  return CATEGORIES.map((cat) => ({ params: { slug: cat.slug }, props: { cat } }));
+}
+const { cat } = Astro.props;
+const articles = (await getArticles()).filter((a) => a.data.category === cat.slug);
+const levelCounts = Object.fromEntries(LEVELS.map((l) => [l, articles.filter((a) => levelsOf(a).includes(l)).length]));
+const mins = articles.length;
+---
+
+<BaseLayout title={cat.name} description={cat.description}>
+  <div class="container cat-hero" style={`--c:${cat.accent}`}>
+    <header class="page-head page-head--cat">
+      <nav aria-label="Breadcrumb"><ol class="crumbs"><li><a href="/categories/">Topics</a></li><li>{cat.short}</li></ol></nav>
+      <span class="track__icon cat-hero__icon"><Icon name={cat.icon} size={30} /></span>
+      <h1 class="display">{cat.name}</h1>
+      <p class="page-head__lead">{cat.description}</p>
+      <ul class="chips" role="list" aria-label="Topics covered">{cat.topics.map((t) => <li class="chip chip--static">{t}</li>)}</ul>
+      <p class="cat-hero__count"><b>{mins}</b> {mins === 1 ? 'guide' : 'guides'} in this track</p>
+    </header>
+    {articles.length ? (
+      <>
+        <LibraryToolbar total={articles.length} levelCounts={levelCounts} />
+        <section class="section section--tight" aria-label="Articles">
+          <div class="grid grid--cards" data-lib-grid>{articles.map((a, i) => <ArticleCard article={a} level={2} eager={i < 3} lib i={i % 6} />)}</div>
+          <div class="empty" data-lib-empty hidden>
+            <h2>No guides match those filters</h2>
+            <p>Try a broader word or clear the filters.</p>
+            <button class="btn btn--primary" type="button" data-lib-reset>Clear filters</button>
+          </div>
+        </section>
+      </>
+    ) : (
+      <section class="section section--tight"><div class="empty"><h2>New {cat.name} guides are on the way</h2><p>Check back soon, or <a href="/articles/">browse every article</a>.</p></div></section>
+    )}
+  </div>
+  <script>
+    import '../../scripts/library';
+  </script>
+</BaseLayout>

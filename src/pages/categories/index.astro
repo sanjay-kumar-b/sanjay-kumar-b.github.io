@@ -1,0 +1,28 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TrackCard from '../../components/TrackCard.astro';
+import SectionHead from '../../components/SectionHead.astro';
+import { getArticles, categoryCounts, allTags } from '../../lib/articles';
+const articles = await getArticles();
+const tracks = categoryCounts(articles);
+const tags = allTags(articles).slice(0, 48);
+---
+
+<BaseLayout title="Topics" description="Browse SF SKODE by topic: Salesforce development, Agentforce, administration, React and DevOps.">
+  <div class="container">
+    <header class="page-head">
+      <p class="eyebrow"><span>Topics</span></p>
+      <h1 class="display">Pick a track</h1>
+      <p class="page-head__lead">Five tracks covering the Salesforce platform and the web skills around it.</p>
+    </header>
+    <section class="section section--tight" aria-label="Tracks">
+      <div class="flow">{tracks.map((c, i) => <TrackCard cat={c} level={2} i={i} />)}</div>
+    </section>
+    {tags.length > 0 && (
+      <section class="section" aria-labelledby="tags-h">
+        <SectionHead id="tags-h" title="Browse by tag" />
+        <div class="chips" data-reveal>{tags.map((t) => <a class="chip" href={`/tag/${t.slug}/`}>{t.name}<span class="chip__n">{t.count}</span></a>)}</div>
+      </section>
+    )}
+  </div>
+</BaseLayout>

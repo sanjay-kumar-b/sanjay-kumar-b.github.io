@@ -1,0 +1,41 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Icon from '../components/Icon.astro';
+import { getArticles, categoryCounts } from '../lib/articles';
+const articles = await getArticles();
+const tracks = categoryCounts(articles);
+---
+
+<BaseLayout title="Search" description="Search every SF SKODE guide by title, topic, tag or keyword." noindex>
+  <div class="container">
+    <header class="page-head">
+      <p class="eyebrow"><span>Search</span></p>
+      <h1 class="display">Find a guide</h1>
+      <div class="search-field" role="search">
+        <Icon name="search" size={22} />
+        <label class="sr-only" for="search-page-input">Search guides</label>
+        <input class="search-field__input" id="search-page-input" type="search" placeholder="Try “batch apex”, “flow” or “agent actions”" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" autofocus />
+        <button class="search-field__clear" type="button" data-clear aria-label="Clear search" hidden><Icon name="close" size={18} /></button>
+      </div>
+      <div class="lib-chips" id="filters" role="group" aria-label="Filter by topic">
+        <button class="chip" type="button" data-cat="" aria-pressed="true">All</button>
+        {tracks.map((c) => <button class="chip" type="button" data-cat={c.slug} aria-pressed="false" style={`--c:${c.accent}`}><i class="dot"></i>{c.short}</button>)}
+      </div>
+    </header>
+    <section class="section section--tight" aria-label="Results">
+      <p class="lib-count" id="count" role="status" aria-live="polite"></p>
+      <div class="grid grid--cards" id="results" aria-busy="true">
+        {Array.from({ length: 6 }).map(() => (
+          <div class="card skeleton-card" aria-hidden="true">
+            <div class="card__media"><div class="skeleton skeleton--fill"></div></div>
+            <div class="card__body"><div class="skeleton" style="width:30%;height:14px"></div><div class="skeleton" style="height:22px"></div><div class="skeleton" style="width:80%;height:14px"></div></div>
+          </div>
+        ))}
+      </div>
+      <noscript><p class="empty">Search needs JavaScript. You can still <a href="/articles/">browse every article</a> or <a href="/categories/">pick a category</a>.</p></noscript>
+    </section>
+  </div>
+  <script>
+    import '../scripts/search-page';
+  </script>
+</BaseLayout>

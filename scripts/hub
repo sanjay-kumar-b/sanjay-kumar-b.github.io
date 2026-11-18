@@ -1,0 +1,103 @@
+#!/data/data/com.termux/files/usr/bin/env bash
+# Control script for hosting the site from an Android phone (Termux).
+# Usage: ./scripts/hub start | stop | restart | status | logs | resources | maintenance on|off
+#
+# One-time setup: create ~/.sfhub/config.env containing
+#   NGROK_DOMAIN=your-name.ngrok-free.app
+# (and run `ngrok config add-authtoken <token>` once).
+
+set -u
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+STATE="${HOME}/.sfhub"
+mkdir -p "$STATE"
+[ -f "$STATE/config.env" ] && . "$STATE/config.env"
+PORT="${PORT:-8080}"
+SERVER_PID="$STATE/server.pid"
+TUNNEL_PID="$STATE/tunnel.pid"
+SERVER_LOG="$STATE/server.log"
+TUNNEL_LOG="$STATE/tunnel.log"
+
+alive() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
+
+stop_one() {
+  if alive "$1"; then
+    kill "$(cat "$1")" 2>/dev/null
+    for _ in 1 2 3 4 5; do alive "$1" || break; sleep 1; done
+    alive "$1" && kill -9 "$(cat "$1")" 2>/dev/null
+  fi
+  rm -f "$1"
+}
+
+cmd_start() {
+  [ -d "$ROOT/dist" ] || { echo "dist/ not found. Copy your built site into $ROOT/dist first."; exit 1; }
+  command -v node >/dev/null || { echo "node is not installed. Run: pkg install nodejs-lts"; exit 1; }
+
+  if alive "$SERVER_PID"; then echo "Server already running."; else
+    command -v termux-wake-lock >/dev/null && termux-wake-lock   # keep CPU awake
+    PORT="$PORT" nohup node "$ROOT/scripts/server.mjs" >>"$SERVER_LOG" 2>&1 &
+    echo $! >"$SERVER_PID"
+    sleep 1
+    alive "$SERVER_PID" && echo "Server started on 127.0.0.1:$PORT" || { echo "Server failed to start. See: ./scripts/hub logs"; exit 1; }
+  fi
+
+  if alive "$TUNNEL_PID"; then echo "Tunnel already running."; else
+    command -v ngrok >/dev/null || { echo "ngrok is not installed or not on PATH. Server is running locally only."; exit 1; }
+    [ -n "${NGROK_DOMAIN:-}" ] || { echo "Set NGROK_DOMAIN in $STATE/config.env"; exit 1; }
+    nohup ngrok http --url="$NGROK_DOMAIN" "$PORT" --log=stdout >>"$TUNNEL_LOG" 2>&1 &
+    echo $! >"$TUNNEL_PID"
+    sleep 3
+    alive "$TUNNEL_PID" && echo "Tunnel started: https://$NGROK_DOMAIN" || { echo "Tunnel failed. See: ./scripts/hub logs"; exit 1; }
+  fi
+}
+
+cmd_stop() {
+  stop_one "$TUNNEL_PID"; stop_one "$SERVER_PID"
+  command -v termux-wake-unlock >/dev/null && termux-wake-unlock
+  echo "Stopped. The site is now offline."
+}
+
+cmd_status() {
+  alive "$SERVER_PID" && echo "Server : RUNNING (pid $(cat "$SERVER_PID"))" || echo "Server : stopped"
+  alive "$TUNNEL_PID" && echo "Tunnel : RUNNING (pid $(cat "$TUNNEL_PID"))" || echo "Tunnel : stopped"
+  # Real health check against the local server, not just "process exists".
+  if command -v curl >/dev/null && alive "$SERVER_PID"; then
+    h="$(curl -fsS -m 3 "http://127.0.0.1:$PORT/healthz" 2>/dev/null)" && echo "Health : OK $h" || echo "Health : FAILED (server not responding)"
+  fi
+  [ -n "${NGROK_DOMAIN:-}" ] && command -v curl >/dev/null && alive "$TUNNEL_PID" && {
+    code="$(curl -s -o /dev/null -m 8 -w '%{http_code}' "https://$NGROK_DOMAIN/healthz" 2>/dev/null)"
+    echo "Public : HTTP $code at https://$NGROK_DOMAIN/healthz"
+  }
+  [ -f "$ROOT/maintenance.flag" ] && echo "Mode   : MAINTENANCE (visitors see the offline page)" || echo "Mode   : live"
+}
+
+cmd_logs() {
+  echo "--- server (last 20) ---"; tail -n 20 "$SERVER_LOG" 2>/dev/null || echo "(none)"
+  echo "--- tunnel (last 20) ---"; tail -n 20 "$TUNNEL_LOG" 2>/dev/null || echo "(none)"
+}
+
+cmd_resources() {
+  for f in "$SERVER_PID" "$TUNNEL_PID"; do
+    if alive "$f"; then ps -o pid=,rss=,etime=,args= -p "$(cat "$f")" 2>/dev/null | awk '{printf "pid %s  mem %.1f MB  up %s  %s %s\n",$1,$2/1024,$3,$4,$5}'; fi
+  done
+  command -v termux-battery-status >/dev/null && termux-battery-status 2>/dev/null || echo "(install Termux:API app + 'pkg install termux-api' for battery/temperature)"
+  df -h "$HOME" 2>/dev/null | tail -n 1
+}
+
+cmd_maintenance() {
+  case "${1:-}" in
+    on)  touch "$ROOT/maintenance.flag"; echo "Maintenance mode ON" ;;
+    off) rm -f "$ROOT/maintenance.flag"; echo "Maintenance mode OFF" ;;
+    *)   echo "Usage: hub maintenance on|off"; exit 1 ;;
+  esac
+}
+
+case "${1:-}" in
+  start) cmd_start ;;
+  stop) cmd_stop ;;
+  restart) cmd_stop; cmd_start ;;
+  status) cmd_status ;;
+  logs) cmd_logs ;;
+  resources) cmd_resources ;;
+  maintenance) cmd_maintenance "${2:-}" ;;
+  *) echo "Usage: $0 start|stop|restart|status|logs|resources|maintenance on|off"; exit 1 ;;
+esac

@@ -1,0 +1,21 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../config/site';
+---
+
+<BaseLayout title="Terms & Conditions" description="Terms of use for this site.">
+  <div class="container container--narrow">
+    <header class="page-head"><h1 class="display">Terms &amp; Conditions</h1><p>Last updated: November 2026</p></header>
+    <div class="doc section--tight">
+      <p>This is a template. Have it reviewed before relying on it.</p>
+      <h2>Use of content</h2>
+      <p>Articles are provided for education. You may quote short excerpts with attribution and a link back. Do not republish full articles without permission.</p>
+      <h2>No warranty</h2>
+      <p>Salesforce changes frequently. Code and advice are provided as-is, without warranty. Test in a sandbox before using anything in production, and confirm against the official documentation.</p>
+      <h2>Independence</h2>
+      <p>{SITE.disclaimer}</p>
+      <h2>Contact</h2>
+      <p><a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a></p>
+    </div>
+  </div>
+</BaseLayout>

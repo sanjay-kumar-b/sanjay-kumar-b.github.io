@@ -1,0 +1,57 @@
+---
+import { SITE } from '../config/site';
+import Icon from './Icon.astro';
+const { currentPath = '/' } = Astro.props;
+const links = [
+  { href: '/articles/', label: 'Articles', icon: 'book' },
+  { href: '/categories/', label: 'Topics', icon: 'compass' },
+  { href: '/category/agentforce/', label: 'Agentforce', icon: 'spark' },
+  { href: '/about/', label: 'About', icon: 'users' },
+  { href: '/contact/', label: 'Contact', icon: 'mail' },
+];
+// /category/agentforce/ must not light up "Topics", and "Topics" covers every other category page.
+const active = (h: string) => {
+  if (h === '/categories/') return currentPath.startsWith('/categories/') || (currentPath.startsWith('/category/') && !currentPath.startsWith('/category/agentforce/'));
+  return currentPath === h || currentPath.startsWith(h);
+};
+---
+
+<header class="site-header" data-header>
+  <div class="container">
+    <div class="bar">
+      <a href="/" class="logo" aria-label={`${SITE.name} home`}>
+        <img class="logo__mark" src="/logo.svg" width="32" height="32" alt="" />
+        <span class="logo__text">{SITE.name}</span>
+      </a>
+      <nav class="nav" aria-label="Main" data-nav>
+        <span class="nav__ind" data-nav-ind aria-hidden="true"></span>
+        {links.map((l) => <a href={l.href} aria-current={active(l.href) ? 'page' : undefined}>{l.label}</a>)}
+      </nav>
+      <div class="bar__tools">
+        <a class="search-btn" href="/search/" data-open-search aria-label="Search articles" aria-keyshortcuts="Control+K Meta+K /">
+          <Icon name="search" size={18} /><span>Search</span><kbd class="kbd" aria-hidden="true">/</kbd>
+        </a>
+        <button class="icon-btn" type="button" data-theme-toggle aria-label="Switch to light theme">
+          <Icon class="theme-moon" name="moon" size={18} /><Icon class="theme-sun" name="sun" size={18} />
+        </button>
+        <button class="icon-btn menu-btn" type="button" data-menu-btn aria-label="Open menu" aria-expanded="false" aria-controls="mnav">
+          <span class="burger" aria-hidden="true"><i></i><i></i><i></i></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile menu. It lives OUTSIDE the header on purpose: a backdrop-filter on the header would turn this fixed panel into a header-sized box. -->
+<div class="mnav" id="mnav" data-mnav aria-label="Menu" role="dialog" aria-modal="true">
+  <div class="mnav__inner">
+    <ul class="mnav__list" role="list">
+      <li style="--i:0"><a href="/" aria-current={currentPath === '/' ? 'page' : undefined}><Icon name="bolt" size={22} /><span>Home</span></a></li>
+      {links.map((l, i) => <li style={`--i:${i + 1}`}><a href={l.href} aria-current={active(l.href) ? 'page' : undefined}><Icon name={l.icon} size={22} /><span>{l.label}</span></a></li>)}
+    </ul>
+    <div class="mnav__foot">
+      <a class="btn btn--primary" href="/search/" data-open-search><Icon name="search" size={18} />Search guides</a>
+      <a class="btn" href="/follow/"><Icon name="rss" size={18} />RSS</a>
+    </div>
+  </div>
+</div>
