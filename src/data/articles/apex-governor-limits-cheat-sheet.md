@@ -55,7 +55,7 @@ Limits are counted **per transaction**. A transaction starts at an entry point (
 | Cumulative callout timeout | 120 seconds | 120 seconds |
 | `System.enqueueJob` calls | 50 | 1 |
 | `sendEmail` invocations | 10 | 10 |
-| Heap size | 6 MB | 12 MB |
+| Heap size | 10 MB | 25 MB |
 | CPU time | 10,000 ms | 60,000 ms |
 
 Other facts to remember:
